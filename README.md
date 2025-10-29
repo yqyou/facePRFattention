@@ -8,15 +8,15 @@ This repo contains code for analyzing the attention effects on human fMRI BOLD s
 
 The main source files are the following:
 
-`cal_matrices.ipynb` contains the code for analyzing human fMRI data. Run this script to perform analyses on the example dataset located in the `/data` directory.
+`/analysis/` contains scripts for analyzing human fMRI data.
 
-`select_voxels.ipynb` contains the code for voxel selection procedures.
+* `cal_matrices.ipynb` contains the code for individual- and population-level analyses. Run this script to perform analyses on the example dataset located in the `/data` directory.
+* `select_voxels.ipynb` contains the code for voxel selection procedures.
+* `/pRF_model/` contains the code for voxel recpetive field model fitting.
 
-`/data/` contains example human fMRI data and corresponding analysis results (2 subjects x 3 ROIs).
+`/data/` contains example human fMRI data and corresponding analysis results (2 subjects * 3 ROIs).
 
 `/figures/` contains scripts for generating figures used in the manuscript.
-
-`/pRF_model/` contains the code for voxel recpetive field model fitting.
 
 ## Citation
 
