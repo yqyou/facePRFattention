@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
+from matplotlib_inline.backend_inline import set_matplotlib_formats
+set_matplotlib_formats('retina')
+
+
 def myvar(X,m):
     # X: (varaible, observation)
     # m: (varaible,)
@@ -29,6 +33,66 @@ def myinv(q):
     q1inv = np.linalg.inv(q1)
     qinv[0:nanind,0:nanind] = q1inv
     return qinv,nanind
+
+def corr_batch_nan(X,ctype='corr',ddof=1):
+
+    """
+    Compute pairwise covariance or Pearson correlation with NaN handling.
+    
+    Parameters
+    ----------
+    X : np.ndarray, shape (..., N, T)
+        Input data, last two dims are variables and time points
+    ctype : str, 'cov' or 'corr'
+        Return covariance or correlation
+    ddof : int
+        Delta degrees of freedom
+    
+    Returns
+    -------
+    out : np.ndarray, shape (..., N, N)
+        Pairwise covariance or correlation
+    """
+
+    mask = (~np.isnan(X)).astype(np.int64)
+    X0 = np.where(mask,X,0.0)
+    
+    # pairwise valid count
+    n = np.einsum('...iT,...jT->...ij',mask,mask)
+    
+    # pairwise sum
+    sum_x = np.einsum('...iT,...jT->...ij',X0,mask)
+    sum_y = np.einsum('...iT,...jT->...ij',mask,X0)
+
+    # pairwise mean
+    mean_x = np.divide(sum_x, n, out=np.full_like(sum_x, np.nan), where=n>0)
+    mean_y = np.divide(sum_y, n, out=np.full_like(sum_y, np.nan), where=n>0)
+
+    # pairwise covariance numerator
+    sum_xy = np.einsum('...iT,...jT->...ij', X0, X0)
+    cov_num  = sum_xy - mean_x * sum_y - mean_y * sum_x + n * mean_x * mean_y
+
+    cov = np.divide(cov_num, n - ddof, out=np.full_like(cov_num, np.nan), where=n>ddof)
+
+    
+    if ctype == 'cov':
+        
+        return cov
+    
+
+    elif ctype == 'corr':
+
+        sum_x2 = np.einsum('...iT,...jT->...ij', X0**2, mask)
+        sum_y2 = np.einsum('...iT,...jT->...ij', mask, X0**2) 
+
+        # pairwise variance
+        var_x = (sum_x2 - 2 * mean_x * sum_x + n * mean_x**2) / (n - ddof)
+        var_y = (sum_y2 - 2 * mean_y * sum_y + n * mean_y**2) / (n - ddof)
+        denom = np.sqrt(var_x * var_y)
+        corr = np.divide(cov, denom, out=np.full_like(cov, np.nan), where=denom>0)
+        
+        return corr
+
 
 def fisherztrans(r):
     '''
@@ -60,7 +124,7 @@ def stat_m_e(data,mtype,etype):
 def paired_mean_diff(x, y):
     return np.mean(x - y)
 
-def pair_test(data,method='wilcoxon',correction='none'):
+def pair_test(data,method='wilcoxon',correction='none',pround=5):
     '''
     data: sample x group x condition[2]
     method: 
@@ -70,6 +134,9 @@ def pair_test(data,method='wilcoxon',correction='none'):
         'bonferroni': p/ngroup
         'fdr_bh': large sample, less strict
         'none'
+    pround: int
+        Round to a certain number of decimal places.
+        'none': no
     '''
     ng = data.shape[1]
     ps = []
@@ -88,13 +155,96 @@ def pair_test(data,method='wilcoxon',correction='none'):
         ps.append(p)
     ps = np.array(ps)
     if correction == 'none':
-        return ps
+        ps_report = ps
+        
     else:
         ps_corrected = multipletests(ps,method = correction)[1]
-        return ps_corrected
+        ps_report = ps_corrected
+
+    if pround != 'none':
+        ps_report = [round(p,pround) for p in ps_report]
+
+    return ps_report
      
+def one_sample_test(data, popmean=0, method='ttest_1samp', correction='none',pround=5):
+    '''
+    对多组数据进行单样本检验。
+
+    参数：
+    ----------
+    data : array_like
+        shape = (sample, group)
+        每列代表一组（例如不同条件或脑区），每行是被试。
+    popmean : float, optional
+        假设总体均值（默认 0）。
+    method : str, optional
+        'ttest_1samp' — 正态分布假设下的单样本 t 检验
+        'wilcoxon' — 非参数单样本检验（检验中位数是否等于 popmean）
+        'permutation' — 置换检验（需要较多样本）
+    correction : str, optional
+        'bonferroni' — Bonferroni 校正
+        'fdr_bh' — FDR (Benjamini-Hochberg)
+        'none' — 不进行校正
+    pround: int, optional
+        Round to a certain number of decimal places.
+        'none' - 不进行取整
+    返回：
+    ----------
+    ps : ndarray
+        每组对应的 p 值（若有 correction 则返回校正后的 p 值）
+    '''
+    ng = data.shape[1]
+    ps = []
+
+    for g in range(ng):
+        d = data[:, g]
+        d = d[~np.isnan(d)]  # 去掉 NaN
+
+        if len(d) == 0:
+            p = 1
+        elif method == 'ttest_1samp':
+            _, p = stats.ttest_1samp(d, popmean)
+        elif method == 'wilcoxon':
+            if np.all(d - popmean == 0):
+                p = 1
+            else:
+                _, p = stats.wilcoxon(d - popmean)
+        elif method == 'permutation':
+            def mean_diff(x):
+                return np.mean(x)
+            p = stats.permutation_test(
+                (d,), statistic=mean_diff,
+                permutation_type='one-sample',
+                alternative='two-sided',
+                n_resamples=10000
+            ).pvalue
+        else:
+            raise ValueError(f"Unknown method: {method}")
+
+        if np.isnan(p):
+            p = 1
+        ps.append(p)
+
+    ps = np.array(ps)
+
+    if correction == 'none':
+        ps_report = ps
+        
+    else:
+        ps_corrected = multipletests(ps,method = correction)[1]
+        ps_report = ps_corrected
+
+    if pround != 'none':
+        ps_report = [round(p,pround) for p in ps_report]
+
+    return ps_report
+
 def test_norm(data,sampletype=1):
-    # sampletype: 1-large sample,0-small sample
+    '''
+    sampletype: 1-large sample,0-small sample
+    return: 1-norm, 2-not norm
+    '''
+    # 正态性检验
     if sampletype==0:
         stat, p = stats.shapiro(data)
     else:
@@ -116,26 +266,45 @@ def sig(p,sig_level=[0.05,0.01,0.001]):
         star = 0
     return star
 
-def mybarplot(data,mtype,etype,cm,xlbl,ylbl,xtk,lg,tlt,ifscatter,ifpairedline,xgap=1):
+def mybarplot(data,mtype,etype,cm,xlbl,ylbl,xtk,lg,tlt,ifscatter,ifpairedline,xgap=1,bartype='paired'):
     '''
-    data: nsample x nxl x ngroup
-    color: ngroup x 3
+    bartype: 'paired'
+        data: nsample x nxl x ngroup
+        color: ngroup x 3
+    bartype: 'ind'
+        data: nsample x nxl
     '''
-    [nsample,nxl,ngroup] = data.shape
-    w = 0.8/ngroup*xgap
-    if mtype == 'mean': mdata = np.nanmean(data,axis=0)
-    elif mtype == 'median': mdata = np.nanmedian(data,axis=0)
-    if etype == 'std': edata = np.nanstd(data,axis=0).reshape((1,nxl,ngroup))
-    elif etype == 'sem': edata = stats.sem(data,axis=0,nan_policy='omit').reshape((1,nxl,ngroup))
-    elif etype == 'ci': ci = stats.bootstrap((data,),np.nanmedian,axis=0,confidence_level=0.68,method='percentile').confidence_interval; edata = np.array([mdata-ci[0],ci[1]-mdata])
-    x = np.linspace(1,nxl*xgap,nxl)
-    for ng in range(ngroup):
-        plt.bar(x+(-0.4*xgap+w*(ng+0.5)),mdata[:,ng],yerr=edata[:,:,ng],width=w,color=cm[ng,:],alpha=0.5)
-        if ifscatter: plt.scatter(nsample*[xx+(-0.4*xgap+w*(ng+0.5)) for xx in x],data[:,:,ng],color=cm[ng,:],s=1/xgap)
-    if ifpairedline:
-        for nx in range(nxl): plt.plot([nsample*[1+nx+(-0.4*xgap+w*(ng+0.5))] for ng in range(ngroup)],data[:,nx,:].T,color='grey',linewidth=1/xgap)
-    plt.xlabel(xlbl);    plt.ylabel(ylbl);    plt.xticks(x,xtk);    plt.legend(lg);    plt.title(tlt)
-
+    if bartype == 'paired':
+        [nsample,nxl,ngroup] = data.shape
+        w = 0.8/ngroup*xgap
+        if mtype == 'mean': mdata = np.nanmean(data,axis=0)
+        elif mtype == 'median': mdata = np.nanmedian(data,axis=0)
+        if etype == 'std': edata = np.nanstd(data,axis=0).reshape((1,nxl,ngroup))
+        elif etype == 'sem': edata = stats.sem(data,axis=0,nan_policy='omit').reshape((1,nxl,ngroup))
+        elif etype == 'ci': ci = stats.bootstrap((data,),np.nanmedian,axis=0,confidence_level=0.68,method='percentile').confidence_interval; edata = np.array([mdata-ci[0],ci[1]-mdata])
+        x = np.linspace(1,nxl*xgap,nxl)
+        for ng in range(ngroup):
+            plt.bar(x+(-0.4*xgap+w*(ng+0.5)),mdata[:,ng],yerr=edata[:,:,ng],width=w,color=cm[ng,:],alpha=0.5)
+            if ifscatter: plt.scatter(nsample*[xx+(-0.4*xgap+w*(ng+0.5)) for xx in x],data[:,:,ng],color=cm[ng,:],s=1/xgap)
+        if ifpairedline:
+            for nx in range(nxl): plt.plot([nsample*[1+nx+(-0.4*xgap+w*(ng+0.5))] for ng in range(ngroup)],data[:,nx,:].T,color='grey',linewidth=1/xgap)
+        plt.xlabel(xlbl);    plt.ylabel(ylbl);    plt.xticks(x,xtk);    plt.legend(lg);    plt.title(tlt)
+    elif bartype == 'ind':
+        [nsample,nxl] = data.shape
+        w = 0.8*xgap
+        if mtype == 'mean': mdata = np.nanmean(data,axis=0)
+        elif mtype == 'median': mdata = np.nanmedian(data,axis=0)
+        if etype == 'std': edata = np.nanstd(data,axis=0)
+        elif etype == 'sem': edata = stats.sem(data,axis=0,nan_policy='omit')
+        elif etype == 'ci': ci = stats.bootstrap((data,),np.nanmedian,axis=0,confidence_level=0.68,method='percentile').confidence_interval; edata = np.array([mdata-ci[0],ci[1]-mdata])
+        x = np.linspace(1,nxl*xgap,nxl)
+        plt.bar(x,mdata,yerr=edata,width=w,color=cm,alpha=0.5)
+        if ifscatter: plt.scatter(nsample*[xx for xx in x],data,color=cm,s=1/xgap)
+        if ifpairedline: 
+            #plt.plot(np.array([np.arange(nsample)+1 for _ in range(nxl)]).T,data,color='grey',linewidth=1/xgap)
+            for sample_i in range(nsample):
+                plt.plot(np.arange(nxl)+1,data[sample_i,:],color='k',linewidth=1/xgap,alpha=(sample_i+1)/(nsample+1))
+        plt.xlabel(xlbl);    plt.ylabel(ylbl);    plt.xticks(x,xtk);   plt.title(tlt)
 
 
 def myheatmap(ax,data,cmap,vm,xlbl,ylbl,xtk,ytk,tlt,cblbl,iftxt):

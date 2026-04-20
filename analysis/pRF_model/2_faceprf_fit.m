@@ -5,9 +5,8 @@ delete(gcp('nocreate')); % shut down parpool if possible
 pobj = parpool('local', 28); % open 6 cores
 
 %% prepare the data and set the parameters
-subj = 'CN056';
-subfoldpath = ['/home/data/rawdata/facePRF/' subj '_faceprf/'];
-cd([subfoldpath 'faceprfanalyze_vol/']);
+subj = 'CN040';
+cd(['../../data/']);
 load([subj '_PRFdatasets.mat']); % The raw data is available upon reasonable request.
 res = 200;
 tasks = {'face','fixation'};
