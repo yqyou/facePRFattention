@@ -146,7 +146,11 @@ def myviolinplot_pair(ax, data_all, mtype, etype, ps, py, cm=None):
     sig_plot(ax,x,w,ps,py,data_m,pair=True,data_all = data_all)
 
 
+<<<<<<< HEAD
 def myviolinplot_ind(ax, data, mtype, etype, ps, py):
+=======
+def myviolinplot_ind(ax, data, mtype, etype, ps, py,color='grey'):
+>>>>>>> master
     '''
     ax
     data_all: nsample x ngroup
@@ -163,7 +167,11 @@ def myviolinplot_ind(ax, data, mtype, etype, ps, py):
                 showmeans = False, showextrema = False, showmedians = False, quantiles = None)
     for b1 in vp1['bodies']:
         b1.set_edgecolor("none")
+<<<<<<< HEAD
         b1.set_facecolor("grey")
+=======
+        b1.set_facecolor(color)
+>>>>>>> master
         b1.set_alpha(0.2)
 
     # 加外轮廓
@@ -171,7 +179,11 @@ def myviolinplot_ind(ax, data, mtype, etype, ps, py):
                         points = 100, bw_method = 'scott', side = "both",
                     showmeans = False, showextrema = False, showmedians = False, quantiles = None)
     for b1 in vp1['bodies']:
+<<<<<<< HEAD
         b1.set_edgecolor("grey")
+=======
+        b1.set_edgecolor(color)
+>>>>>>> master
         b1.set_facecolor("none")
         b1.set_alpha(0.7)
 
@@ -181,13 +193,21 @@ def myviolinplot_ind(ax, data, mtype, etype, ps, py):
     # 加散点
     jitter = np.random.uniform(-w/4,w/4,data.shape)
     ax.scatter(np.zeros_like(data)+x+jitter, data, 
+<<<<<<< HEAD
                 color = "grey", alpha = 1, s = 15, edgecolors = 'white',linewidths=0.5)
+=======
+                color = color, alpha = 1, s = 15, edgecolors = 'white',linewidths=0.5)
+>>>>>>> master
 
     ax.set_xticks(x)
 
     # 加显著性
     if len(ps) > 0:
+<<<<<<< HEAD
         sig_plot(ax,x,w,ps,py,data_m,pair=True,data_all = data)
+=======
+        sig_plot(ax,x,w,ps,py,data_m,pair=False,data_all = data)
+>>>>>>> master
 
 
 def myviolinplot_multi(ax, data, mtype, etype, ps, py):
@@ -243,6 +263,84 @@ def myviolinplot_multi(ax, data, mtype, etype, ps, py):
     sig_plot(ax,x,w,ps,py,data_m,pair=False,data_all = data)
 
 
+<<<<<<< HEAD
+=======
+def myviolinplot_group(ax, data_all, mtype, etype, group_labels, cond_labels,colors,legendtitle=None):
+    """
+    data_all: nsample x ngroup x ncondition
+    (ps: ngroup>2)
+    """
+
+    _, ngroup, ncondition = data_all.shape
+
+    group_gap = 1
+    cond_gap = 1.1
+    width = 0.8
+
+    alphas = np.linspace(0.3, 0.9, ngroup)
+
+    data_m,data_e = np.zeros([data_all.shape[1],data_all.shape[2]]),np.zeros([2,data_all.shape[1],data_all.shape[2]])
+    for cond_i in range(ncondition):
+        base_x = cond_i * (ngroup*group_gap + cond_gap)
+
+        if etype == "ci":
+            [data_m[:,cond_i],data_e[:,:,cond_i],bsamples] = stat_m_e(data_all[:,:,cond_i],mtype=mtype,etype=etype)
+            data = bsamples.copy()
+        else:
+            [data_m[:,cond_i],data_e[:,:,cond_i],bsamples] = stat_m_e(data_all[:,:,cond_i],mtype=mtype,etype=etype)
+            data = data_all[:,:,cond_i]
+
+
+        for group_i in range(ngroup):
+            x = base_x + group_i * group_gap + 1
+            y = data[:, group_i]
+            
+            y = y[np.isfinite(y)]
+            if len(y) == 0:
+                continue
+
+            # violin
+            vp = ax.violinplot(y, positions=[x],
+                vert=True, widths=width, points=100, bw_method='scott', 
+                showmeans=False, showextrema=False, showmedians=False,
+            )
+
+            for body in vp['bodies']:
+                body.set_facecolor(colors[cond_i])
+                body.set_edgecolor("none")
+                body.set_alpha(alphas[group_i]/2)
+            
+            if cond_i == 0: vp["bodies"][0].set_label(group_labels[group_i])
+
+            vp = ax.violinplot(y, positions=[x],
+                vert=True, widths=width, points=100, bw_method='scott', 
+                showmeans=False, showextrema=False, showmedians=False
+            )
+
+            for body in vp['bodies']:
+                body.set_facecolor("none")
+                body.set_edgecolor(colors[cond_i])
+                body.set_alpha(alphas[group_i])
+
+            # errorbar
+            ax.errorbar(x, data_m[group_i,cond_i],data_e[:,group_i,cond_i][:,None],
+                color='k', marker='o', linestyle='', 
+                elinewidth=1.8, markersize=5)
+
+            # scatter
+            jitter = np.random.uniform(-width / 4, width / 4, size=len(y))
+            ax.scatter(np.full(len(y), x) + jitter,y,
+                color=colors[cond_i], alpha=alphas[group_i],
+                s=15,edgecolors='white',linewidths=0.5)
+
+    # condition label
+    cond_center = np.arange(ncondition) * (ngroup*group_gap + cond_gap) + (ngroup + 1) / 2
+    ax.set_xticks(cond_center)
+    ax.set_xticklabels(cond_labels)
+    if legendtitle: ax.legend(frameon=True,title=legendtitle,loc='center left',bbox_to_anchor=(1.02,0.5))
+
+
+>>>>>>> master
 def sig_plot(ax,x,w,ps,pys,data_m,pair=True,data_all=[]):
     nxl = len(x)
     

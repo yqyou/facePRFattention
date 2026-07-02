@@ -8,6 +8,10 @@ from statsmodels.stats.multitest import multipletests
 import seaborn as sns
 import matplotlib.colors as mcolors
 import pingouin as pg
+<<<<<<< HEAD
+=======
+import warnings
+>>>>>>> master
 
 # 定义画图相关的函数
 
@@ -202,7 +206,65 @@ def paired_ttest_full(x, y, method='wilcoxon'):
         })
         
         return report
+<<<<<<< HEAD
         
+=======
+
+
+def rmanova_2factors(data, factor1_name, factor2_name, factor1_labels, factor2_labels, simpleprint=None):
+    """
+    Repeated-measures ANOVA for task x PC.
+
+    Parameters
+    ----------
+    data : array
+        Shape: nsample x nfactor1 x nfactor2
+    factor1_labels : list
+    factor2_labels : list
+
+    Returns
+    -------
+    aov : pandas.DataFrame
+        Pingouin repeated-measures ANOVA result.
+    df_long : pandas.DataFrame
+        Long-format data used for ANOVA.
+    """
+
+    nsample,nfactor1,nfactor2 = data.shape
+
+    rows = []
+    for f1 in range(nfactor1):
+        for f2 in range(nfactor2):
+            for s in range(nsample):
+                rows.append({
+                    'sample': s,
+                    f'{factor1_name}': factor1_labels[f1],
+                    f'{factor2_name}': factor2_labels[f2],
+                    'value': data[s, f1, f2]
+                })
+
+    df_long = pd.DataFrame(rows).dropna(subset=['value'])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+
+        aov = pg.rm_anova(
+            data=df_long,
+            dv='value',
+            within=[factor1_name, factor2_name],
+            subject='sample',
+            detailed=True
+        )
+
+    if simpleprint:
+        for fi in simpleprint:
+            sts = [aov['F'].iloc[fi], aov['p-GG-corr'].iloc[fi], aov['ng2'].iloc[fi], aov['eps'].iloc[fi]]
+            sts = [round(s,4) for s in sts]
+            print(f"{aov['Source'].iloc[fi]}:F({aov['ddof1'].iloc[fi]},{aov['ddof2'].iloc[fi]})={sts[0]}, p-corr={sts[1]},ng2={sts[2]},eps={sts[3]}")
+
+    return aov, df_long
+     
+>>>>>>> master
 
 def sig(p,fmt='text'):
     '''
