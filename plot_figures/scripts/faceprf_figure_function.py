@@ -146,11 +146,7 @@ def myviolinplot_pair(ax, data_all, mtype, etype, ps, py, cm=None):
     sig_plot(ax,x,w,ps,py,data_m,pair=True,data_all = data_all)
 
 
-<<<<<<< HEAD
-def myviolinplot_ind(ax, data, mtype, etype, ps, py):
-=======
 def myviolinplot_ind(ax, data, mtype, etype, ps, py,color='grey'):
->>>>>>> master
     '''
     ax
     data_all: nsample x ngroup
@@ -167,11 +163,7 @@ def myviolinplot_ind(ax, data, mtype, etype, ps, py,color='grey'):
                 showmeans = False, showextrema = False, showmedians = False, quantiles = None)
     for b1 in vp1['bodies']:
         b1.set_edgecolor("none")
-<<<<<<< HEAD
-        b1.set_facecolor("grey")
-=======
         b1.set_facecolor(color)
->>>>>>> master
         b1.set_alpha(0.2)
 
     # 加外轮廓
@@ -179,11 +171,7 @@ def myviolinplot_ind(ax, data, mtype, etype, ps, py,color='grey'):
                         points = 100, bw_method = 'scott', side = "both",
                     showmeans = False, showextrema = False, showmedians = False, quantiles = None)
     for b1 in vp1['bodies']:
-<<<<<<< HEAD
-        b1.set_edgecolor("grey")
-=======
         b1.set_edgecolor(color)
->>>>>>> master
         b1.set_facecolor("none")
         b1.set_alpha(0.7)
 
@@ -193,21 +181,13 @@ def myviolinplot_ind(ax, data, mtype, etype, ps, py,color='grey'):
     # 加散点
     jitter = np.random.uniform(-w/4,w/4,data.shape)
     ax.scatter(np.zeros_like(data)+x+jitter, data, 
-<<<<<<< HEAD
-                color = "grey", alpha = 1, s = 15, edgecolors = 'white',linewidths=0.5)
-=======
                 color = color, alpha = 1, s = 15, edgecolors = 'white',linewidths=0.5)
->>>>>>> master
 
     ax.set_xticks(x)
 
     # 加显著性
     if len(ps) > 0:
-<<<<<<< HEAD
-        sig_plot(ax,x,w,ps,py,data_m,pair=True,data_all = data)
-=======
         sig_plot(ax,x,w,ps,py,data_m,pair=False,data_all = data)
->>>>>>> master
 
 
 def myviolinplot_multi(ax, data, mtype, etype, ps, py):
@@ -263,8 +243,6 @@ def myviolinplot_multi(ax, data, mtype, etype, ps, py):
     sig_plot(ax,x,w,ps,py,data_m,pair=False,data_all = data)
 
 
-<<<<<<< HEAD
-=======
 def myviolinplot_group(ax, data_all, mtype, etype, group_labels, cond_labels,colors,legendtitle=None):
     """
     data_all: nsample x ngroup x ncondition
@@ -340,7 +318,6 @@ def myviolinplot_group(ax, data_all, mtype, etype, group_labels, cond_labels,col
     if legendtitle: ax.legend(frameon=True,title=legendtitle,loc='center left',bbox_to_anchor=(1.02,0.5))
 
 
->>>>>>> master
 def sig_plot(ax,x,w,ps,pys,data_m,pair=True,data_all=[]):
     nxl = len(x)
     

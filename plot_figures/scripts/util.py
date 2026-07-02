@@ -8,10 +8,7 @@ from statsmodels.stats.multitest import multipletests
 import seaborn as sns
 import matplotlib.colors as mcolors
 import pingouin as pg
-<<<<<<< HEAD
-=======
 import warnings
->>>>>>> master
 
 # 定义画图相关的函数
 
@@ -206,9 +203,6 @@ def paired_ttest_full(x, y, method='wilcoxon'):
         })
         
         return report
-<<<<<<< HEAD
-        
-=======
 
 
 def rmanova_2factors(data, factor1_name, factor2_name, factor1_labels, factor2_labels, simpleprint=None):
@@ -264,7 +258,6 @@ def rmanova_2factors(data, factor1_name, factor2_name, factor1_labels, factor2_l
 
     return aov, df_long
      
->>>>>>> master
 
 def sig(p,fmt='text'):
     '''
